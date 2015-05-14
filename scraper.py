@@ -12,6 +12,7 @@ root = lxml.html.fromstring(resp.text)
 terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
          for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
+data = []
 
 for term_name, term_url in terms:
     while term_url:
@@ -22,7 +23,6 @@ for term_name, term_url in terms:
         trs = term_root.cssselect('.jsn-infotable')[0].cssselect('tr')[1:]
 
         for tr in trs:
-            data = []
             member = {}
             member['term'] = term_name
             member['chamber'] = 'National Assembly'
@@ -45,12 +45,12 @@ for term_name, term_url in terms:
             # javascript turned on.
 
             split_url = urlsplit(member['details_url'])
-            member['id'] = parse_qs(split_url.query)
+            member['id'] = parse_qs(split_url.query).get('id')[0]
 
             data.append(member)
 
-            scraperwiki.sqlite.save(unique_keys=['id'], data=data)
-
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
+
+scraperwiki.sqlite.save(unique_keys=['id'], data=data)
 
