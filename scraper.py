@@ -12,9 +12,9 @@ root = lxml.html.fromstring(resp.text)
 terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
          for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
-data = []
 
 for term_name, term_url in terms:
+    data = []
     while term_url:
         print term_url
         term_resp = requests.get(term_url)
@@ -52,4 +52,4 @@ for term_name, term_url in terms:
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
-scraperwiki.sqlite.save(unique_keys=['id'], data=data)
+    scraperwiki.sqlite.save(unique_keys=['id'], data=data)
