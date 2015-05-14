@@ -1,6 +1,8 @@
-from urlparse import urljoin
+from urlparse import urljoin, urlsplit, parse_qs
 import requests
 import lxml.html
+
+import scraperwiki
 
 source_url = 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'
 resp = requests.get(source_url)
@@ -13,36 +15,36 @@ terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
 data = []
 
 for term_name, term_url in terms:
-
     while term_url:
         print term_url
         term_resp = requests.get(term_url)
         term_root = lxml.html.fromstring(term_resp.text)
 
+        trs = term_root.cssselect('.jsn-infotable')[0].cssselect('tr')[1:]
+
+        for tr in trs:
+            member = {}
+            member['term'] = term_name
+            member['chamber'] = 'National Assembly'
+
+            # There are no constituencies, it's a central party list system
+            member['area'] = ''
+
+            name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
+            member['name'] = name_link.text.strip()
+            member['details_url'] = urljoin(source_url, name_link.get('href'))
+
+            member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
+
+            # .jsn-table-column-email contains the email address, but only with
+            # javascript turned on.
+
+            split_url = urlsplit(member['details_url'])
+            member['id'] = parse_qs(split_url.query)
+
+            data.append(member)
+
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
-# This is a template for a Python scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
-
-# import scraperwiki
-# import lxml.html
-#
-# # Read in a page
-# html = scraperwiki.scrape("http://foo.com")
-#
-# # Find something on the page using css selectors
-# root = lxml.html.fromstring(html)
-# root.cssselect("div[align='left']")
-#
-# # Write out to the sqlite database using scraperwiki library
-# scraperwiki.sqlite.save(unique_keys=['name'], data={"name": "susan", "occupation": "software developer"})
-#
-# # An arbitrary query against the database
-# scraperwiki.sql.select("* from data where 'name'='peter'")
-
-# You don't have to do things with the ScraperWiki and lxml libraries.
-# You can use whatever libraries you want: https://morph.io/documentation/python
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+scraperwiki.sqlite.save(unique_keys=['id'], data=data)
