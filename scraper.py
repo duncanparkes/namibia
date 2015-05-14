@@ -14,7 +14,6 @@ terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
 
 
 for term_name, term_url in terms:
-    data = []
     while term_url:
         print term_url
         term_resp = requests.get(term_url)
@@ -23,6 +22,7 @@ for term_name, term_url in terms:
         trs = term_root.cssselect('.jsn-infotable')[0].cssselect('tr')[1:]
 
         for tr in trs:
+            data = []
             member = {}
             member['term'] = term_name
             member['chamber'] = 'National Assembly'
@@ -49,7 +49,8 @@ for term_name, term_url in terms:
 
             data.append(member)
 
+            scraperwiki.sqlite.save(unique_keys=['id'], data=data)
+
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
-    scraperwiki.sqlite.save(unique_keys=['id'], data=data)
