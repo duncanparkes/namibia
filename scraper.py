@@ -34,7 +34,12 @@ for term_name, term_url in terms:
             member['name'] = name_link.text.strip()
             member['details_url'] = urljoin(source_url, name_link.get('href'))
 
-            member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
+            try:
+                member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
+            except AttributeError:
+                # Karupu, Sebastiaan, for example, has nothing in this column.
+                # http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479&limitstart=40
+                member['party'] = ''
 
             # .jsn-table-column-email contains the email address, but only with
             # javascript turned on.
