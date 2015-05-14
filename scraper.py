@@ -44,13 +44,10 @@ for term_name, term_url in terms:
             # .jsn-table-column-email contains the email address, but only with
             # javascript turned on.
 
-            split_url = urlsplit(member['details_url'])
-            member['id'] = parse_qs(split_url.query).get('id')[0]
-
             data.append(member)
 
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
-scraperwiki.sqlite.save(unique_keys=['id'], data=data)
+scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data)
 
