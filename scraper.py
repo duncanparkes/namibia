@@ -47,11 +47,17 @@ for term_name, term_url in terms:
             # .jsn-table-column-email contains the email address, but only with
             # javascript turned on.
 
-            # details_resp = requests.get(details_url)
-            # details_root = lxml.html.fromstring(details_resp.text)
-            # import pdb;pdb.set_trace()
+            details_resp = requests.get(details_url)
+            details_root = lxml.html.fromstring(details_resp.text)
 
             key = (member['name'], member['term'])
+
+            try:
+                member['image'] = urljoin(source_url, details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src'))
+            except:
+                print "No image found for {} in {}".format(*key)
+                member['image'] = ''
+
             if key in data:
                 print "Duplicate (name, term) pair ignored: ({}, {})".format(*key)
             else:
