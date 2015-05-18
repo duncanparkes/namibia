@@ -14,7 +14,7 @@ root = lxml.html.fromstring(resp.text)
 terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
          for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
-data = []
+data = {}
 
 for term_name, term_url in terms:
     while term_url:
@@ -47,14 +47,18 @@ for term_name, term_url in terms:
             # .jsn-table-column-email contains the email address, but only with
             # javascript turned on.
 
-            details_resp = requests.get(details_url)
-            details_root = lxml.html.fromstring(details_resp.text)
+            # details_resp = requests.get(details_url)
+            # details_root = lxml.html.fromstring(details_resp.text)
             # import pdb;pdb.set_trace()
 
-            data.append(member)
+            key = (member['name'], member['term'])
+            if key in data:
+                print "Duplicate (name, term) pair ignored: ({}, {})".format(*key)
+            else:
+                data[key] = member
 
         next_links = term_root.cssselect('a[title=Next]')
         term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
-scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data)
+scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data.values())
 
