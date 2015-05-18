@@ -4,6 +4,8 @@ import lxml.html
 
 import scraperwiki
 
+from slugify import slugify_unicode
+
 source_url = 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'
 resp = requests.get(source_url)
 
@@ -32,7 +34,8 @@ for term_name, term_url in terms:
 
             name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
             member['name'] = name_link.text.strip()
-            member['details_url'] = urljoin(source_url, name_link.get('href'))
+            member['id'] = slugify_unicode(member['name'])
+            details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
 
             try:
                 member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
@@ -43,6 +46,10 @@ for term_name, term_url in terms:
 
             # .jsn-table-column-email contains the email address, but only with
             # javascript turned on.
+
+            details_resp = requests.get(details_url)
+            details_root = lxml.html.fromstring(details_resp.text)
+            # import pdb;pdb.set_trace()
 
             data.append(member)
 
