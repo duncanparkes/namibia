@@ -59,7 +59,11 @@ def handle_chamber(chamber_name, source_url, data):
                 key = (member['name'], member['term'])
 
                 try:
-                    member['image'] = urljoin(source_url, details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src'))
+                    src = details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src')
+                    if src:
+                        member['image'] = urljoin(source_url, details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src'))
+                    else:
+                        member['image'] = ''
                 except:
                     print "No image found for {} in {}".format(*key)
                     member['image'] = ''
