@@ -7,8 +7,8 @@ import scraperwiki
 from slugify import slugify_unicode
 
 sources = (
-    ('National Assembly', 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'),
     ('National Council', 'http://www.parliament.na/index.php?option=com_contact&view=category&id=108&Itemid=1483'),
+    ('National Assembly', 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'),
     )
 
 
