@@ -6,65 +6,75 @@ import scraperwiki
 
 from slugify import slugify_unicode
 
-source_url = 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'
-resp = requests.get(source_url)
+sources = (
+    ('National Assembly', 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'),
+    ('National Council', 'http://www.parliament.na/index.php?option=com_contact&view=category&id=108&Itemid=1483'),
+    )
 
-root = lxml.html.fromstring(resp.text)
-
-terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
-         for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
 data = {}
 
-for term_name, term_url in terms:
-    while term_url:
-        print term_url
-        term_resp = requests.get(term_url)
-        term_root = lxml.html.fromstring(term_resp.text)
+def handle_chamber(chamber_name, source_url, data):
+    resp = requests.get(source_url)
 
-        trs = term_root.cssselect('.jsn-infotable')[0].cssselect('tr')[1:]
+    root = lxml.html.fromstring(resp.text)
 
-        for tr in trs:
-            member = {}
-            member['term'] = term_name
-            member['chamber'] = 'National Assembly'
+    terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
+             for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
-            # There are no constituencies, it's a central party list system
-            member['area'] = ''
+    for term_name, term_url in terms:
+        while term_url:
+            print term_url
+            term_resp = requests.get(term_url)
+            term_root = lxml.html.fromstring(term_resp.text)
 
-            name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
-            member['name'] = name_link.text.strip()
-            member['id'] = slugify_unicode(member['name'])
-            details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
+            trs = term_root.cssselect('.jsn-infotable')[0].cssselect('tr')[1:]
 
-            try:
-                member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
-            except AttributeError:
-                # Karupu, Sebastiaan, for example, has nothing in this column.
-                # http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479&limitstart=40
-                member['party'] = ''
+            for tr in trs:
+                member = {}
+                member['term'] = term_name
+                member['chamber'] = chamber_name
 
-            # .jsn-table-column-email contains the email address, but only with
-            # javascript turned on.
+                # There are no constituencies, it's a central party list system
+                member['area'] = ''
 
-            details_resp = requests.get(details_url)
-            details_root = lxml.html.fromstring(details_resp.text)
+                name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
+                member['name'] = name_link.text.strip()
+                member['id'] = slugify_unicode(member['name'])
+                details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
 
-            key = (member['name'], member['term'])
+                try:
+                    member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
+                except AttributeError:
+                    # Karupu, Sebastiaan, for example, has nothing in this column.
+                    # http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479&limitstart=40
+                    member['party'] = ''
 
-            try:
-                member['image'] = urljoin(source_url, details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src'))
-            except:
-                print "No image found for {} in {}".format(*key)
-                member['image'] = ''
+                # .jsn-table-column-email contains the email address, but only with
+                # javascript turned on.
 
-            if key in data:
-                print "Duplicate (name, term) pair ignored: ({}, {})".format(*key)
-            else:
-                data[key] = member
+                details_resp = requests.get(details_url)
+                details_root = lxml.html.fromstring(details_resp.text)
 
-        next_links = term_root.cssselect('a[title=Next]')
-        term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
+                key = (member['name'], member['term'])
+
+                try:
+                    member['image'] = urljoin(source_url, details_root.cssselect('.jsn-contact-image')[0].cssselect('img')[0].get('src'))
+                except:
+                    print "No image found for {} in {}".format(*key)
+                    member['image'] = ''
+
+                if key in data:
+                    print "Duplicate (name, term) pair ignored: ({}, {})".format(*key)
+                else:
+                    data[key] = member
+
+            next_links = term_root.cssselect('a[title=Next]')
+            term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
+
+
+for chamber, source_url in sources:
+    handle_chamber(chamber, source_url, data)
 
 scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data.values())
 
