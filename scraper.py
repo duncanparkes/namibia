@@ -95,6 +95,7 @@ def handle_chamber(chamber_name, source_url, data, term_data):
 for chamber, source_url in sources:
     handle_chamber(chamber, source_url, data, term_data)
 
+print term_data
 scraperwiki.sqlite.save(unique_keys=['id'], data=term_data, table_name='terms')
 scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data.values())
 
