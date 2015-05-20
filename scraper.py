@@ -32,7 +32,7 @@ def handle_chamber(chamber_name, source_url, data, term_data):
             'id': term_name,
             'start_date': int(start_date),
             'end_date': int(end_date),
-            'term_number': int(term_number),
+            'term_number': int(term_number) if term_number else 0,
             }
 
         term_data.append(term)
