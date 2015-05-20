@@ -14,7 +14,7 @@ sources = (
 
 
 data = {}
-term_data = {}
+term_data = []
 
 def handle_chamber(chamber_name, source_url, data, term_data):
     resp = requests.get(source_url)
@@ -24,7 +24,6 @@ def handle_chamber(chamber_name, source_url, data, term_data):
     terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
              for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
-    term_data = []
     for term_name, term_url in terms:
         term_number, start_date, end_date = re.match(r'(\d*)[^\d]+(\d{4})[ -]+(\d{4})', term_name).groups()
         term = {
