@@ -1,3 +1,4 @@
+import re
 from urlparse import urljoin, urlsplit, parse_qs
 import requests
 import lxml.html
@@ -13,8 +14,9 @@ sources = (
 
 
 data = {}
+term_data = {}
 
-def handle_chamber(chamber_name, source_url, data):
+def handle_chamber(chamber_name, source_url, data, term_data):
     resp = requests.get(source_url)
 
     root = lxml.html.fromstring(resp.text)
@@ -22,7 +24,19 @@ def handle_chamber(chamber_name, source_url, data):
     terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
              for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
+    term_data = []
     for term_name, term_url in terms:
+        term_number, start_date, end_date = re.match(r'(\d*)[^\d]+(\d{4})[ -]+(\d{4})', term_name).groups()
+        term = {
+            'name': term_name,
+            'id': term_name,
+            'start_date': int(start_date),
+            'end_date': int(end_date),
+            'term_number': int(term_number),
+            }
+
+        term_data.append(term)
+
         while term_url:
             print term_url
             term_resp = requests.get(term_url)
@@ -33,6 +47,7 @@ def handle_chamber(chamber_name, source_url, data):
             for tr in trs:
                 member = {}
                 member['term'] = term_name
+                member['term_id'] = term_name
                 member['chamber'] = chamber_name
 
                 # There are no constituencies, it's a central party list system
@@ -78,7 +93,8 @@ def handle_chamber(chamber_name, source_url, data):
 
 
 for chamber, source_url in sources:
-    handle_chamber(chamber, source_url, data)
+    handle_chamber(chamber, source_url, data, term_data)
 
+scraperwiki.sqlite.save(unique_keys=['id'], data=term_data, table_name='terms')
 scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data.values())
 
