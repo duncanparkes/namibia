@@ -1,9 +1,12 @@
 import re
 from urlparse import urljoin, urlsplit, parse_qs
+
+from HTMLParser import HTMLParser
+unescape = HTMLParser().unescape
+
 import requests
 import lxml.html
-
-import scraperwiki
+import execjs
 
 from slugify import slugify_unicode
 
@@ -67,6 +70,20 @@ def handle_chamber(chamber_name, source_url, data, term_data):
                 # .jsn-table-column-email contains the email address, but only with
                 # javascript turned on.
 
+                mailto_script = tr.cssselect('.jsn-table-column-email')[0].getchildren()[0].text_content()
+
+
+                # Get hold of the lines of javascript which aren't fiddling with the DOM
+                jslines = [x.strip() for x in re.search(r'<!--(.*)//-->', mailto_script, re.M | re.S).group(1).strip().splitlines() if not x.strip().startswith('document')]
+
+                # The name of the variable containing the variable containing the email address
+                # varies, so find it by regex.
+                varname = re.search(r'var (addy\d+)', mailto_script).group(1)
+                jslines.append('return {}'.format(varname))
+
+                js = '(function() {{{}}})()'.format(' '.join(jslines))
+                member['email'] = unescape(execjs.eval(js))
+
                 details_resp = requests.get(details_url)
                 details_root = lxml.html.fromstring(details_resp.text)
 
@@ -94,7 +111,8 @@ def handle_chamber(chamber_name, source_url, data, term_data):
 for chamber, source_url in sources:
     handle_chamber(chamber, source_url, data, term_data)
 
-print term_data
+
+import scraperwiki
 scraperwiki.sqlite.save(unique_keys=['id'], data=term_data, table_name='terms')
 scraperwiki.sqlite.save(unique_keys=['name', 'term'], data=data.values())
 
