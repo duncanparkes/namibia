@@ -16,6 +16,22 @@ sources = (
     )
 
 
+def unjs_email(script):
+    """Takes a javascript email mangling script and returns the email address."""
+
+    # Get hold of the lines of javascript which aren't fiddling with the DOM
+    jslines = [x.strip() for x in re.search(r'<!--(.*)//-->', script, re.M | re.S).group(1).strip().splitlines() if not x.strip().startswith('document')]
+
+    # The name of the variable containing the variable containing the email address
+    # varies, so find it by regex.
+    varname = re.search(r'var (addy\d+)', script).group(1)
+    jslines.append('return {}'.format(varname))
+
+    js = '(function() {{{}}})()'.format(' '.join(jslines))
+
+    return unescape(execjs.eval(js))
+
+
 data = {}
 term_data = []
 
@@ -67,22 +83,25 @@ def handle_chamber(chamber_name, source_url, data, term_data):
                     # http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479&limitstart=40
                     member['party'] = ''
 
-                # .jsn-table-column-email contains the email address, but only with
-                # javascript turned on.
+                try:
+                    script = tr.cssselect('.jsn-table-column-email')[0].getchildren()[0].text_content()
+                except (AttributeError, IndexError):
+                    # No no email for this person.
+                    script = None
+                else:
+                    member['email'] = unjs_email(script)
 
-                mailto_script = tr.cssselect('.jsn-table-column-email')[0].getchildren()[0].text_content()
 
+                # # Get hold of the lines of javascript which aren't fiddling with the DOM
+                # jslines = [x.strip() for x in re.search(r'<!--(.*)//-->', mailto_script, re.M | re.S).group(1).strip().splitlines() if not x.strip().startswith('document')]
 
-                # Get hold of the lines of javascript which aren't fiddling with the DOM
-                jslines = [x.strip() for x in re.search(r'<!--(.*)//-->', mailto_script, re.M | re.S).group(1).strip().splitlines() if not x.strip().startswith('document')]
+                # # The name of the variable containing the variable containing the email address
+                # # varies, so find it by regex.
+                # varname = re.search(r'var (addy\d+)', mailto_script).group(1)
+                # jslines.append('return {}'.format(varname))
 
-                # The name of the variable containing the variable containing the email address
-                # varies, so find it by regex.
-                varname = re.search(r'var (addy\d+)', mailto_script).group(1)
-                jslines.append('return {}'.format(varname))
-
-                js = '(function() {{{}}})()'.format(' '.join(jslines))
-                member['email'] = unescape(execjs.eval(js))
+                # js = '(function() {{{}}})()'.format(' '.join(jslines))
+                # member['email'] = unescape(execjs.eval(js))
 
                 details_resp = requests.get(details_url)
                 details_root = lxml.html.fromstring(details_resp.text)
