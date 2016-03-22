@@ -43,6 +43,9 @@ def handle_chamber(chamber_name, source_url, data, term_data):
     terms = [(x.find('span').text.strip(), urljoin(source_url, x.get('href')))
              for x in root.cssselect('.menu-treemenu')[0].cssselect('a')]
 
+    name_to_id = {}
+    ids = set()
+
     for term_name, term_url in terms:
         term_number, start_date, end_date = re.match(r'(\d*)[^\d]+(\d{4})[ -]+(\d{4})', term_name).groups()
         term = {
@@ -73,8 +76,20 @@ def handle_chamber(chamber_name, source_url, data, term_data):
 
                 name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
                 member['name'] = name_link.text.strip()
-                member['id'] = slugify_unicode(member['name'])
                 details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
+                # print details_url
+
+                possible_id = parse_qs(urlsplit(details_url).query).get('id')[0].split(':')[1]
+
+                member['id'] = re.sub(r'-1st|-2nd|-3rd|-4th|-5th|-6th', '', possible_id)
+
+                ids.add(member['id'])
+                print member['id']
+                if member['name'] in name_to_id:
+                    assert member['id'] == name_to_id[member['name']], (member['id'], name_to_id[member['name']], details_url)
+                    print "Seen {} before".format(member['name'])
+                else:
+                    name_to_id[member['name']] = member['id']
 
                 try:
                     member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
@@ -126,6 +141,7 @@ def handle_chamber(chamber_name, source_url, data, term_data):
             next_links = term_root.cssselect('a[title=Next]')
             term_url = urljoin(term_url, next_links[0].get('href')) if next_links else None
 
+    import pdb;pdb.set_trace()
 
 for chamber, source_url in sources:
     handle_chamber(chamber, source_url, data, term_data)
