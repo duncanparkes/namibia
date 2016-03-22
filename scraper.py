@@ -8,8 +8,6 @@ import requests
 import lxml.html
 import execjs
 
-from slugify import slugify_unicode
-
 sources = (
     ('National Council', 'http://www.parliament.na/index.php?option=com_contact&view=category&id=108&Itemid=1483'),
     ('National Assembly', 'http://www.parliament.gov.na/index.php?option=com_contact&view=category&id=104&Itemid=1479'),
@@ -73,8 +71,10 @@ def handle_chamber(chamber_name, source_url, data, term_data):
 
                 name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
                 member['name'] = name_link.text.strip()
-                member['id'] = slugify_unicode(member['name'])
                 details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
+
+                possible_id = parse_qs(urlsplit(details_url).query).get('id')[0].split(':')[1]
+                member['id'] = re.sub(r'-1st|-2nd|-3rd|-4th|-5th|-6th', '', possible_id)
 
                 try:
                     member['party'] = tr.cssselect('.jsn-table-column-country')[0].text.strip()
