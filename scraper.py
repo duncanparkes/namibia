@@ -72,7 +72,11 @@ def handle_chamber(chamber_name, source_url, data, term_data):
                 member['area'] = ''
 
                 name_link = tr.cssselect('.jsn-table-column-name')[0].find('a')
-                member['name'] = name_link.text.strip()
+                name, note = re.match(r'\s+([^\(]+)\s*(?:\((.+)\))?', name_link.text).groups()
+                member['name'] = name.strip()
+                if note:
+                    member['note'] = note
+
                 member['id'] = slugify_unicode(member['name'])
                 details_url = member['details_url'] = urljoin(source_url, name_link.get('href'))
 
